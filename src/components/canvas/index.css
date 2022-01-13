@@ -1,0 +1,20 @@
+.CanvasWrapper {
+  position: relative;
+}
+
+#myCanvas {
+}
+
+.vertex {
+  position: absolute;
+  border-radius: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: translate(-50%, -50%);
+
+  background-color: rgb(0, 72, 157);
+  color: white;
+
+  font-size: 30px;
+}

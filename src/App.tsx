@@ -1,13 +1,9 @@
 import React from "react"
 
-import "./App.css"
+import { Canvas } from "components"
 
 const App = () => {
-  return (
-    <canvas id="myCanvas" width="600" height="400">
-      Your browser does not support the HTML5 canvas tag.
-    </canvas>
-  )
+  return <Canvas />
 }
 
 export default App
