@@ -1,14 +1,23 @@
 import React, { useEffect } from "react"
 
 import { Point, Props } from "./types"
-import { buildTriangle, drawRegion, drawTarget, isInside } from "./utils"
+import {
+  buildTriangle,
+  drawRegion,
+  drawTarget,
+  drawText,
+  getEdgeMiddlePosition,
+  isInside,
+} from "./utils"
+
+import ArrowImage from "assets/images/arrow.png"
 
 import "./index.css"
 
 const Canvas: React.FC<Props> = ({
-  radius = 200,
+  radius = 220,
   vertexRadius = 50,
-  targetRadius = 7,
+  targetRadius = 5,
 }): JSX.Element => {
   const width: number =
     Math.sqrt(Math.pow(radius, 2) - Math.pow(radius / 2, 2)) * 2
@@ -23,12 +32,12 @@ const Canvas: React.FC<Props> = ({
   let target: Point = center
 
   const triRegion: Point[] = buildTriangle(radius, center)
-  const innerRegion: Point[] = buildTriangle(
-    radius - vertexRadius - targetRadius,
-    center
-  )
+  const innerRegion: Point[] = buildTriangle(radius - vertexRadius, center)
+  const innerRegionEdge: Point[] = getEdgeMiddlePosition(innerRegion)
+  const outerRegion: Point[] = buildTriangle(radius + vertexRadius + 10, center)
+  const outerRegionEdge: Point[] = getEdgeMiddlePosition(outerRegion)
 
-  const DrawCanvas = (): void => {
+  const DrawCanvas = (isMoving: boolean): void => {
     if (canvasDOM && canvasDOM.getContext) {
       const ctx: CanvasRenderingContext2D = canvasDOM.getContext(
         "2d"
@@ -37,7 +46,33 @@ const Canvas: React.FC<Props> = ({
       ctx.clearRect(0, 0, canvasDOM.width, canvasDOM.height)
 
       drawRegion(ctx, triRegion, "#9fc3f5")
-      drawTarget(ctx, target, targetRadius)
+      drawText(ctx, "ENERGY\nTRILEMMA", "#005eca", "bold 30px serif", 0, center)
+      drawText(
+        ctx,
+        "ECONOMICS",
+        "#00469b",
+        "bold 20px serif",
+        60,
+        innerRegionEdge[0]
+      )
+      drawText(
+        ctx,
+        "RELIABILITY",
+        "#00469b",
+        "bold 20px serif",
+        0,
+        innerRegionEdge[1]
+      )
+      drawText(
+        ctx,
+        "SUSTAINABILITY",
+        "#00469b",
+        "bold 20px serif",
+        -60,
+        innerRegionEdge[2]
+      )
+
+      drawTarget(ctx, target, targetRadius, isMoving)
     }
   }
 
@@ -56,8 +91,23 @@ const Canvas: React.FC<Props> = ({
         height: radius * 2,
       }}
     >
-      {index}
+      {String(index).padStart(2, "0")}
     </div>
+  )
+
+  const renderArrow = (edge: Point, index: number): JSX.Element => (
+    <img
+      key={index}
+      className="arrow"
+      src={ArrowImage}
+      alt="some"
+      style={{
+        width: radius,
+        left: edge.x,
+        top: edge.y,
+        transform: `translate(-50%, -50%) rotate(${60 + index * 120}deg)`,
+      }}
+    />
   )
 
   const EventListeners = (): void => {
@@ -79,16 +129,27 @@ const Canvas: React.FC<Props> = ({
 
     canvasDOM.addEventListener("mouseup", function (e) {
       moving = false
+      DrawCanvas(moving)
     })
 
     canvasDOM.addEventListener("mousemove", function (e) {
       if (moving) {
         if (isInside(target, innerRegion)) {
-          DrawCanvas()
+          DrawCanvas(moving)
         }
-        target = {
-          x: e.clientX - 1,
-          y: e.clientY - 1,
+        if (
+          isInside(
+            {
+              x: e.clientX,
+              y: e.clientY,
+            },
+            innerRegion
+          )
+        ) {
+          target = {
+            x: e.clientX - 1,
+            y: e.clientY - 1,
+          }
         }
       }
     })
@@ -103,7 +164,7 @@ const Canvas: React.FC<Props> = ({
         canvasDOM = dom
         clearInterval(findDomTimer)
 
-        DrawCanvas()
+        DrawCanvas(moving)
         EventListeners()
       }
     }, 100)
@@ -122,6 +183,9 @@ const Canvas: React.FC<Props> = ({
       </canvas>
       {triRegion.map((vertex: Point, index: number) => {
         return renderVertex(vertex, vertexRadius, index + 1)
+      })}
+      {outerRegionEdge.map((edge: Point, index: number) => {
+        return renderArrow(edge, index)
       })}
     </div>
   )

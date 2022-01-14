@@ -36,6 +36,21 @@ export const buildTriangle = (radius: number, center: Point): Point[] => {
   ]
 }
 
+export const getEdgeMiddlePosition = (points: Point[]): Point[] => {
+  const length = points.length
+  const result: Point[] = []
+
+  for (let i = 0; i < length; i++) {
+    const { x: xi, y: yi } = points[i]
+    const { x: xj, y: yj } = points[(i + 1) % length]
+    result.push({
+      x: xi + (xj - xi) / 2,
+      y: yi + (yj - yi) / 2,
+    })
+  }
+  return result
+}
+
 export const drawRegion = (
   ctx: CanvasRenderingContext2D,
   points: Point[],
@@ -55,16 +70,54 @@ export const drawRegion = (
   ctx.closePath()
 }
 
+export const drawText = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  fontColor: string = "#000000",
+  font: string = "bold 24px serif",
+  angle: number = 0,
+  position: Point
+): void => {
+  const multipleTxt = text.split("\n")
+
+  ctx.beginPath()
+  ctx.save()
+  ctx.translate(position.x, position.y)
+  ctx.rotate((angle * Math.PI) / 180)
+  ctx.textAlign = "center"
+  ctx.font = font
+  ctx.fillStyle = fontColor
+
+  const metrics = ctx.measureText(text)
+  const actualHeight =
+    metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
+
+  multipleTxt.forEach((txt: string, i: number) => {
+    ctx.fillText(txt, 0, actualHeight / 2 + i * actualHeight + (i > 0 ? 10 : 0))
+  })
+  ctx.restore()
+  ctx.closePath()
+}
+
 export const drawTarget = (
   ctx: CanvasRenderingContext2D,
   point: Point,
-  radius: number = 5
+  radius: number = 5,
+  isMoving: boolean = false
 ): void => {
   const { x, y } = point
   ctx.beginPath()
   ctx.arc(x, y, radius, 0, 2 * Math.PI)
-  ctx.fillStyle = "red"
-  ctx.fill()
+  ctx.fillStyle = "#e44d46"
+
+  console.log(111, isMoving)
+  if (isMoving) {
+    ctx.strokeStyle = "#fca7aa"
+  } else {
+    ctx.strokeStyle = "transparent"
+  }
+  ctx.lineWidth = 5
   ctx.stroke()
+  ctx.fill()
   ctx.closePath()
 }
