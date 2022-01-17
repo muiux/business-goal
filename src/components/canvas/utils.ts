@@ -110,7 +110,6 @@ export const drawTarget = (
   ctx.arc(x, y, radius, 0, 2 * Math.PI)
   ctx.fillStyle = "#e44d46"
 
-  console.log(111, isMoving)
   if (isMoving) {
     ctx.strokeStyle = "#fca7aa"
   } else {

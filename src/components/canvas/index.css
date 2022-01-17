@@ -3,6 +3,7 @@
 }
 
 .vertex {
+  pointer-events: none;
   position: absolute;
   border-radius: 100%;
   display: flex;
@@ -18,6 +19,7 @@
 }
 
 .arrow {
+  pointer-events: none;
   position: absolute;
   transform: translate(-50%, -50%);
 }

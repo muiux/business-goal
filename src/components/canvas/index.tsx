@@ -33,9 +33,10 @@ const Canvas: React.FC<Props> = ({
 
   const triRegion: Point[] = buildTriangle(radius, center)
   const innerRegion: Point[] = buildTriangle(radius - vertexRadius, center)
-  const innerRegionEdge: Point[] = getEdgeMiddlePosition(innerRegion)
+  const txtPositions: Point[] = getEdgeMiddlePosition(innerRegion)
   const outerRegion: Point[] = buildTriangle(radius + vertexRadius + 10, center)
-  const outerRegionEdge: Point[] = getEdgeMiddlePosition(outerRegion)
+  const arrowPositions: Point[] = getEdgeMiddlePosition(outerRegion)
+  const targetRegion: Point[] = buildTriangle(radius - targetRadius * 2, center)
 
   const DrawCanvas = (isMoving: boolean): void => {
     if (canvasDOM && canvasDOM.getContext) {
@@ -53,7 +54,7 @@ const Canvas: React.FC<Props> = ({
         "#00469b",
         "bold 20px serif",
         60,
-        innerRegionEdge[0]
+        txtPositions[0]
       )
       drawText(
         ctx,
@@ -61,7 +62,7 @@ const Canvas: React.FC<Props> = ({
         "#00469b",
         "bold 20px serif",
         0,
-        innerRegionEdge[1]
+        txtPositions[1]
       )
       drawText(
         ctx,
@@ -69,7 +70,7 @@ const Canvas: React.FC<Props> = ({
         "#00469b",
         "bold 20px serif",
         -60,
-        innerRegionEdge[2]
+        txtPositions[2]
       )
 
       drawTarget(ctx, target, targetRadius, isMoving)
@@ -134,7 +135,7 @@ const Canvas: React.FC<Props> = ({
 
     canvasDOM.addEventListener("mousemove", function (e) {
       if (moving) {
-        if (isInside(target, innerRegion)) {
+        if (isInside(target, targetRegion)) {
           DrawCanvas(moving)
         }
         if (
@@ -143,7 +144,7 @@ const Canvas: React.FC<Props> = ({
               x: e.clientX,
               y: e.clientY,
             },
-            innerRegion
+            targetRegion
           )
         ) {
           target = {
@@ -156,13 +157,13 @@ const Canvas: React.FC<Props> = ({
   }
 
   useEffect(() => {
-    const findDomTimer = setInterval(() => {
+    const timer = setInterval(() => {
       const dom: HTMLCanvasElement | null = document.getElementById(
         "myCanvas"
       ) as HTMLCanvasElement | null
       if (dom) {
         canvasDOM = dom
-        clearInterval(findDomTimer)
+        clearInterval(timer)
 
         DrawCanvas(moving)
         EventListeners()
@@ -184,7 +185,7 @@ const Canvas: React.FC<Props> = ({
       {triRegion.map((vertex: Point, index: number) => {
         return renderVertex(vertex, vertexRadius, index + 1)
       })}
-      {outerRegionEdge.map((edge: Point, index: number) => {
+      {arrowPositions.map((edge: Point, index: number) => {
         return renderArrow(edge, index)
       })}
     </div>
