@@ -47,12 +47,19 @@ const Canvas: React.FC<Props> = ({
       ctx.clearRect(0, 0, canvasDOM.width, canvasDOM.height)
 
       drawRegion(ctx, triRegion, "#9fc3f5")
-      drawText(ctx, "ENERGY\nTRILEMMA", "#005eca", "bold 30px serif", 0, center)
+      drawText(
+        ctx,
+        "ENERGY\nTRILEMMA",
+        "#005eca",
+        "bold 30px sans-serif",
+        0,
+        center
+      )
       drawText(
         ctx,
         "ECONOMICS",
         "#00469b",
-        "bold 20px serif",
+        "bold 20px sans-serif",
         60,
         txtPositions[0]
       )
@@ -60,7 +67,7 @@ const Canvas: React.FC<Props> = ({
         ctx,
         "RELIABILITY",
         "#00469b",
-        "bold 20px serif",
+        "bold 20px sans-serif",
         0,
         txtPositions[1]
       )
@@ -68,7 +75,7 @@ const Canvas: React.FC<Props> = ({
         ctx,
         "SUSTAINABILITY",
         "#00469b",
-        "bold 20px serif",
+        "bold 20px sans-serif",
         -60,
         txtPositions[2]
       )
