@@ -28,22 +28,58 @@ export const isInsideCircle = (
   return Math.sqrt((x - x0) * (x - x0) + (y - y0) * (y - y0)) < radius
 }
 
-export const buildTriangle = (radius: number, center: Point): Point[] => {
+export const buildTriangle = (
+  radius: number,
+  center: Point,
+  sides: number = 3
+): Point[] => {
   const { x, y } = center
-  return [
-    {
-      x: x,
-      y: y - radius,
-    },
-    {
-      x: x + Math.sqrt(Math.pow(radius, 2) - Math.pow(radius / 2, 2)),
-      y: y + radius / 2,
-    },
-    {
-      x: x - Math.sqrt(Math.pow(radius, 2) - Math.pow(radius / 2, 2)),
-      y: y + radius / 2,
-    },
-  ]
+
+  return Array.apply(null, Array(sides)).map(
+    (value, i: number): Point => ({
+      x: x + radius * Math.cos((i * 2 * Math.PI) / sides - Math.PI / 2),
+      y: y + radius * Math.sin((i * 2 * Math.PI) / sides - Math.PI / 2),
+    })
+  )
+}
+
+export const generateGoalRegions = (
+  center: Point,
+  radius: number
+): Point[][] => {
+  const tipRadius: number = radius / 3
+  const tipCenters: Point[] = buildTriangle(radius - tipRadius, center)
+
+  const tipRegions: Point[][] = tipCenters.map((tipCenter: Point): Point[] =>
+    buildTriangle(tipRadius, tipCenter)
+  )
+
+  const innerRadius: number = radius - (tipRadius / 2) * 3
+  const innerRegion: Point[] = buildTriangle(innerRadius, center)
+  const edgeRegions: Point[][] = []
+
+  for (let i = 0; i < 3; i++) {
+    const edgeRegion: Point[] = []
+    edgeRegion.push({
+      x: innerRegion[i].x,
+      y: innerRegion[i].y,
+    })
+    edgeRegion.push({
+      x: innerRegion[(i + 1) % 3].x,
+      y: innerRegion[(i + 1) % 3].y,
+    })
+    edgeRegion.push({
+      x: tipRegions[(i + 1) % 3][i].x,
+      y: tipRegions[(i + 1) % 3][i].y,
+    })
+    edgeRegion.push({
+      x: tipRegions[i][(1 + i) % 3].x,
+      y: tipRegions[i][(1 + i) % 3].y,
+    })
+    edgeRegions.push(edgeRegion)
+  }
+
+  return tipRegions.concat(edgeRegions)
 }
 
 export const getEdgeMiddlePosition = (points: Point[]): Point[] => {
@@ -129,4 +165,17 @@ export const drawTarget = (
   ctx.stroke()
   ctx.fill()
   ctx.closePath()
+}
+
+export const percentageFormatter = (
+  amount: number,
+  digits: number = 0
+): string => {
+  const option = {
+    style: "percent",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }
+
+  return new Intl.NumberFormat("en-US", option).format(amount)
 }

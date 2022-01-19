@@ -1,21 +1,21 @@
 import { useDispatch, useSelector } from "react-redux"
 import { AppDispatch, AppState } from "states"
-import { updateTargetAction } from "./actions"
+import { updateTargetRatesAction } from "./actions"
 import { TargetState } from "./types"
 
-export function useRates() {
+export function useTargetRates() {
   const dispatch = useDispatch<AppDispatch>()
-  const target = useSelector<AppState, TargetState>(
+  const targetRates = useSelector<AppState, TargetState>(
     (state: AppState): TargetState => state.target
   )
 
-  const updateTarget = (
+  const updateTargetRates = (
     economicsRate: number,
     sustainabilityRate: number,
     reliabilityRate: number
   ): void => {
     dispatch(
-      updateTargetAction({
+      updateTargetRatesAction({
         economicsRate,
         sustainabilityRate,
         reliabilityRate,
@@ -23,5 +23,5 @@ export function useRates() {
     )
   }
 
-  return [target, updateTarget]
+  return { targetRates, updateTargetRates }
 }

@@ -6,14 +6,17 @@ import {
   drawRegion,
   drawTarget,
   drawText,
+  generateGoalRegions,
   getEdgeMiddlePosition,
   isInsideCircle,
   isInsidePolygon,
+  percentageFormatter,
 } from "./utils"
 
 import ArrowImage from "assets/images/arrow.png"
 
 import "./index.css"
+import { useTargetRates } from "states/target/hooks"
 
 let canvasDOM: HTMLCanvasElement
 
@@ -31,14 +34,22 @@ const Canvas: React.FC<Props> = ({
     x: width / 2 + vertexRadius,
     y: radius + vertexRadius,
   }
-  let target: Point = center
+  let targetPoint: Point = center
 
   const triRegion: Point[] = buildTriangle(radius, center)
-  const innerRegion: Point[] = buildTriangle(radius - vertexRadius, center)
-  const txtPositions: Point[] = getEdgeMiddlePosition(innerRegion)
-  const outerRegion: Point[] = buildTriangle(radius + vertexRadius + 10, center)
-  const arrowPositions: Point[] = getEdgeMiddlePosition(outerRegion)
   const targetRegion: Point[] = buildTriangle(radius - targetRadius * 2, center)
+  const txtPositions: Point[] = getEdgeMiddlePosition(
+    buildTriangle(radius - vertexRadius, center)
+  )
+  const arrowPositions: Point[] = getEdgeMiddlePosition(
+    buildTriangle(radius + vertexRadius + 10, center)
+  )
+  const ratePositions: Point[] = getEdgeMiddlePosition(
+    buildTriangle(radius + vertexRadius + 100, center)
+  )
+  const goalRegions: Point[][] = generateGoalRegions(center, radius)
+
+  const { targetRates, updateTargetRates } = useTargetRates()
 
   const isRestricted = (point: Point): boolean => {
     const isInsideVertex = targetRegion.some((vertex: Point) =>
@@ -55,6 +66,48 @@ const Canvas: React.FC<Props> = ({
     return true
   }
 
+  const detectGoal = (point: Point): void => {
+    let regionId = 0 //  center of tri
+    let newRates = Object.values(targetRates)
+
+    for (let i = 0; i < goalRegions.length; i++) {
+      const region = goalRegions[i]
+      const isInside = isInsidePolygon(point, region)
+      if (isInside) {
+        regionId = i + 1
+        break
+      }
+    }
+
+    switch (regionId) {
+      case 0: //  center of tri
+        newRates = [1 / 3, 1 / 3, 1 / 3]
+        break
+      case 1: //  tip1
+        newRates = [1 / 2, 0, 1 / 2]
+        break
+      case 2: //  tip2
+        newRates = [1 / 2, 1 / 2, 0]
+        break
+      case 3: //  tip3
+        newRates = [0, 1 / 2, 1 / 2]
+        break
+      case 4: //  edge1
+        newRates = [1, 0, 0]
+        break
+      case 5: //  edge2
+        newRates = [0, 1, 0]
+        break
+      case 6: //  edge3
+        newRates = [0, 0, 1]
+        break
+      default:
+        //  unknown
+        break
+    }
+    updateTargetRates(newRates[0], newRates[1], newRates[2])
+  }
+
   const DrawCanvas = (isMoving: boolean): void => {
     if (canvasDOM && canvasDOM.getContext) {
       const ctx: CanvasRenderingContext2D = canvasDOM.getContext(
@@ -64,6 +117,17 @@ const Canvas: React.FC<Props> = ({
       ctx.clearRect(0, 0, canvasDOM.width, canvasDOM.height)
 
       drawRegion(ctx, triRegion, "#9fc3f5")
+
+      // goalRegions.forEach((region: Point[]) => {
+      //   drawRegion(
+      //     ctx,
+      //     region,
+      //     `rgb(${(Math.random() * 1000) % 255}, ${
+      //       (Math.random() * 1000) % 255
+      //     }, ${(Math.random() * 1000) % 255})`
+      //   )
+      // })
+
       drawText(
         ctx,
         "ENERGY\nTRILEMMA",
@@ -72,32 +136,20 @@ const Canvas: React.FC<Props> = ({
         0,
         center
       )
-      drawText(
-        ctx,
-        "ECONOMICS",
-        "#00469b",
-        "bold 20px sans-serif",
-        60,
-        txtPositions[0]
-      )
-      drawText(
-        ctx,
-        "RELIABILITY",
-        "#00469b",
-        "bold 20px sans-serif",
-        0,
-        txtPositions[1]
-      )
-      drawText(
-        ctx,
-        "SUSTAINABILITY",
-        "#00469b",
-        "bold 20px sans-serif",
-        -60,
-        txtPositions[2]
+      ;["ECONOMICS", "RELIABILITY", "SUSTAINABILITY"].forEach(
+        (txt: string, index: number) => {
+          drawText(
+            ctx,
+            txt,
+            "#00469b",
+            "bold 20px sans-serif",
+            60 - 60 * index,
+            txtPositions[index]
+          )
+        }
       )
 
-      drawTarget(ctx, target, targetRadius, isMoving)
+      drawTarget(ctx, targetPoint, targetRadius, isMoving)
     }
   }
 
@@ -135,6 +187,21 @@ const Canvas: React.FC<Props> = ({
     />
   )
 
+  const renderRate = (point: Point, index: number): JSX.Element => (
+    <div
+      key={index}
+      id={`#rate${index}`}
+      className="rate"
+      style={{
+        left: point.x,
+        top: point.y,
+        transform: `translate(-50%, -50%) rotate(${60 - index * 60}deg)`,
+      }}
+    >
+      {percentageFormatter(Object.values(targetRates)[index])}
+    </div>
+  )
+
   const EventListeners = (): void => {
     if (!canvasDOM) {
       return
@@ -144,7 +211,8 @@ const Canvas: React.FC<Props> = ({
       const mouseX = e.clientX - 1,
         mouseY = e.clientY - 1,
         distance = Math.sqrt(
-          Math.pow(mouseX - target.x, 2) + Math.pow(mouseY - target.y, 2)
+          Math.pow(mouseX - targetPoint.x, 2) +
+            Math.pow(mouseY - targetPoint.y, 2)
         )
 
       if (distance <= targetRadius) {
@@ -159,7 +227,7 @@ const Canvas: React.FC<Props> = ({
 
     canvasDOM.addEventListener("mousemove", function (e) {
       if (moving) {
-        if (!isRestricted(target)) {
+        if (!isRestricted(targetPoint)) {
           DrawCanvas(moving)
         }
         if (
@@ -168,11 +236,13 @@ const Canvas: React.FC<Props> = ({
             y: e.clientY,
           })
         ) {
-          target = {
+          targetPoint = {
             x: e.clientX - 1,
             y: e.clientY - 1,
           }
         }
+
+        detectGoal(targetPoint)
       }
     })
   }
@@ -208,6 +278,9 @@ const Canvas: React.FC<Props> = ({
       })}
       {arrowPositions.map((edge: Point, index: number) => {
         return renderArrow(edge, index)
+      })}
+      {ratePositions.map((edge: Point, index: number) => {
+        return renderRate(edge, index)
       })}
     </div>
   )
