@@ -1,6 +1,6 @@
 import { Point } from "./types"
 
-export const isInside = (point: Point, polygon: Point[]): boolean => {
+export const isInsidePolygon = (point: Point, polygon: Point[]): boolean => {
   // ray-casting algorithm based on
   // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html/pnpoly.html
   const { x, y } = point
@@ -16,6 +16,16 @@ export const isInside = (point: Point, polygon: Point[]): boolean => {
   }
 
   return inside
+}
+
+export const isInsideCircle = (
+  point: Point,
+  center: Point,
+  radius: number
+): boolean => {
+  const { x, y } = point
+  const { x: x0, y: y0 } = center
+  return Math.sqrt((x - x0) * (x - x0) + (y - y0) * (y - y0)) < radius
 }
 
 export const buildTriangle = (radius: number, center: Point): Point[] => {

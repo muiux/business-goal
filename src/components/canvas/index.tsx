@@ -7,12 +7,15 @@ import {
   drawTarget,
   drawText,
   getEdgeMiddlePosition,
-  isInside,
+  isInsideCircle,
+  isInsidePolygon,
 } from "./utils"
 
 import ArrowImage from "assets/images/arrow.png"
 
 import "./index.css"
+
+let canvasDOM: HTMLCanvasElement
 
 const Canvas: React.FC<Props> = ({
   radius = 220,
@@ -24,7 +27,6 @@ const Canvas: React.FC<Props> = ({
   const height: number = radius * 1.5
 
   let moving: boolean = false
-  let canvasDOM: HTMLCanvasElement
   let center: Point = {
     x: width / 2 + vertexRadius,
     y: radius + vertexRadius,
@@ -37,6 +39,21 @@ const Canvas: React.FC<Props> = ({
   const outerRegion: Point[] = buildTriangle(radius + vertexRadius + 10, center)
   const arrowPositions: Point[] = getEdgeMiddlePosition(outerRegion)
   const targetRegion: Point[] = buildTriangle(radius - targetRadius * 2, center)
+
+  const isRestricted = (point: Point): boolean => {
+    const isInsideVertex = targetRegion.some((vertex: Point) =>
+      isInsideCircle(point, vertex, vertexRadius)
+    )
+    if (isInsideVertex) {
+      return true
+    }
+
+    const isInsideTri = isInsidePolygon(point, targetRegion)
+    if (isInsideTri) {
+      return false
+    }
+    return true
+  }
 
   const DrawCanvas = (isMoving: boolean): void => {
     if (canvasDOM && canvasDOM.getContext) {
@@ -142,17 +159,14 @@ const Canvas: React.FC<Props> = ({
 
     canvasDOM.addEventListener("mousemove", function (e) {
       if (moving) {
-        if (isInside(target, targetRegion)) {
+        if (!isRestricted(target)) {
           DrawCanvas(moving)
         }
         if (
-          isInside(
-            {
-              x: e.clientX,
-              y: e.clientY,
-            },
-            targetRegion
-          )
+          !isRestricted({
+            x: e.clientX,
+            y: e.clientY,
+          })
         ) {
           target = {
             x: e.clientX - 1,
