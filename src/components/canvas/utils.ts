@@ -55,18 +55,24 @@ export const generateGoalRegions = (
   )
 
   const innerRadius: number = radius - (tipRadius / 2) * 3
-  const innerRegion: Point[] = buildTriangle(innerRadius, center)
-  const edgeRegions: Point[][] = []
+  const outerRadius: number = radius + (tipRadius / 2) * 3
+
+  const orgTri: Point[] = buildTriangle(radius, center)
+  const interTri: Point[] = buildTriangle(innerRadius, center)
+  const outerTri: Point[] = buildTriangle(outerRadius, center)
+
+  const txtRegions: Point[][] = []
+  const outRegions: Point[][] = []
 
   for (let i = 0; i < 3; i++) {
     const edgeRegion: Point[] = []
     edgeRegion.push({
-      x: innerRegion[i].x,
-      y: innerRegion[i].y,
+      x: interTri[i].x,
+      y: interTri[i].y,
     })
     edgeRegion.push({
-      x: innerRegion[(i + 1) % 3].x,
-      y: innerRegion[(i + 1) % 3].y,
+      x: interTri[(i + 1) % 3].x,
+      y: interTri[(i + 1) % 3].y,
     })
     edgeRegion.push({
       x: tipRegions[(i + 1) % 3][i].x,
@@ -76,10 +82,31 @@ export const generateGoalRegions = (
       x: tipRegions[i][(1 + i) % 3].x,
       y: tipRegions[i][(1 + i) % 3].y,
     })
-    edgeRegions.push(edgeRegion)
+    txtRegions.push(edgeRegion)
   }
 
-  return tipRegions.concat(edgeRegions)
+  for (let i = 0; i < 3; i++) {
+    const outRegion: Point[] = []
+    outRegion.push({
+      x: orgTri[i].x,
+      y: orgTri[i].y,
+    })
+    outRegion.push({
+      x: orgTri[(i + 1) % 3].x,
+      y: orgTri[(i + 1) % 3].y,
+    })
+    outRegion.push({
+      x: outerTri[(i + 1) % 3].x,
+      y: outerTri[(i + 1) % 3].y,
+    })
+    outRegion.push({
+      x: outerTri[i].x,
+      y: outerTri[i].y,
+    })
+    outRegions.push(outRegion)
+  }
+
+  return tipRegions.concat(txtRegions).concat(outRegions)
 }
 
 export const getEdgeMiddlePosition = (points: Point[]): Point[] => {

@@ -38,6 +38,7 @@ const Canvas: React.FC<Props> = ({
 
   const triRegion: Point[] = buildTriangle(radius, center)
   const targetRegion: Point[] = buildTriangle(radius - targetRadius * 2, center)
+  const outerTri: Point[] = buildTriangle(radius + vertexRadius * 2, center)
   const txtPositions: Point[] = getEdgeMiddlePosition(
     buildTriangle(radius - vertexRadius, center)
   )
@@ -59,11 +60,11 @@ const Canvas: React.FC<Props> = ({
       return true
     }
 
-    const isInsideTri = isInsidePolygon(point, targetRegion)
-    if (isInsideTri) {
-      return false
+    const isInsideTri = isInsidePolygon(point, outerTri)
+    if (!isInsideTri) {
+      return true
     }
-    return true
+    return false
   }
 
   const detectGoal = (point: Point): void => {
@@ -93,12 +94,21 @@ const Canvas: React.FC<Props> = ({
         newRates = [0, 1 / 2, 1 / 2]
         break
       case 4: //  edge1
-        newRates = [1, 0, 0]
+        newRates = [2 / 3, 1 / 6, 1 / 6]
         break
       case 5: //  edge2
-        newRates = [0, 1, 0]
+        newRates = [1 / 6, 2 / 3, 1 / 6]
         break
       case 6: //  edge3
+        newRates = [1 / 6, 1 / 6, 2 / 3]
+        break
+      case 7: //  outer1
+        newRates = [1, 0, 0]
+        break
+      case 8: //  outer2
+        newRates = [0, 1, 0]
+        break
+      case 9: //  outer3
         newRates = [0, 0, 1]
         break
       default:
