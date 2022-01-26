@@ -1,5 +1,11 @@
 import { Point } from "./types"
 
+/**
+ * check whether point is inside of the polygon or not
+ * @param point target point position(x, y)
+ * @param polygon the vertex array of the polygon
+ * @returns boolean
+ */
 export const isInsidePolygon = (point: Point, polygon: Point[]): boolean => {
   // ray-casting algorithm based on
   // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html/pnpoly.html
@@ -18,6 +24,13 @@ export const isInsidePolygon = (point: Point, polygon: Point[]): boolean => {
   return inside
 }
 
+/**
+ * check whether point is inside of the circle or not
+ * @param point target point position(x, y)
+ * @param center center position of the circle
+ * @param radius radius of the circle
+ * @returns boolean
+ */
 export const isInsideCircle = (
   point: Point,
   center: Point,
@@ -28,21 +41,36 @@ export const isInsideCircle = (
   return Math.sqrt((x - x0) * (x - x0) + (y - y0) * (y - y0)) < radius
 }
 
+/**
+ * generating triangle vertexes with given center of gravity and radius of triangle
+ * @param radius  radius of triangle
+ * @param center  center of gravity
+ * @param initAngle triangle's initial angle
+ * @param sides   future feature: sides length of the polygon(default as 3)
+ * @returns vertexes position array of the triangle
+ */
 export const buildTriangle = (
   radius: number,
   center: Point,
+  initAngle: number = Math.PI / 2,
   sides: number = 3
 ): Point[] => {
   const { x, y } = center
 
   return Array.apply(null, Array(sides)).map(
     (value, i: number): Point => ({
-      x: x + radius * Math.cos((i * 2 * Math.PI) / sides - Math.PI / 2),
-      y: y + radius * Math.sin((i * 2 * Math.PI) / sides - Math.PI / 2),
+      x: x + radius * Math.cos((i * 2 * Math.PI) / sides - initAngle),
+      y: y + radius * Math.sin((i * 2 * Math.PI) / sides - initAngle),
     })
   )
 }
 
+/**
+ * generating the goal regions
+ * @param center center position of the origin triangle
+ * @param radius radius of the triangle
+ * @returns Polygon array
+ */
 export const generateGoalRegions = (
   center: Point,
   radius: number
@@ -50,6 +78,7 @@ export const generateGoalRegions = (
   const tipRadius: number = radius / 3
   const tipCenters: Point[] = buildTriangle(radius - tipRadius, center)
 
+  //  tip regions: corner of the triangle
   const tipRegions: Point[][] = tipCenters.map((tipCenter: Point): Point[] =>
     buildTriangle(tipRadius, tipCenter)
   )
@@ -58,21 +87,22 @@ export const generateGoalRegions = (
   const outerRadius: number = radius + (tipRadius / 2) * 3
 
   const orgTri: Point[] = buildTriangle(radius, center)
-  const interTri: Point[] = buildTriangle(innerRadius, center)
+  const innerTri: Point[] = buildTriangle(innerRadius, center)
   const outerTri: Point[] = buildTriangle(outerRadius, center)
 
-  const txtRegions: Point[][] = []
+  const inRegions: Point[][] = []
   const outRegions: Point[][] = []
 
+  // inner Regions depend on inner triangle vertexes and tip Region vertexes
   for (let i = 0; i < 3; i++) {
     const edgeRegion: Point[] = []
     edgeRegion.push({
-      x: interTri[i].x,
-      y: interTri[i].y,
+      x: innerTri[i].x,
+      y: innerTri[i].y,
     })
     edgeRegion.push({
-      x: interTri[(i + 1) % 3].x,
-      y: interTri[(i + 1) % 3].y,
+      x: innerTri[(i + 1) % 3].x,
+      y: innerTri[(i + 1) % 3].y,
     })
     edgeRegion.push({
       x: tipRegions[(i + 1) % 3][i].x,
@@ -82,9 +112,10 @@ export const generateGoalRegions = (
       x: tipRegions[i][(1 + i) % 3].x,
       y: tipRegions[i][(1 + i) % 3].y,
     })
-    txtRegions.push(edgeRegion)
+    inRegions.push(edgeRegion)
   }
 
+  // outer Regions depend on outer triangle vertexes and origin triangle vertexes
   for (let i = 0; i < 3; i++) {
     const outRegion: Point[] = []
     outRegion.push({
@@ -106,24 +137,15 @@ export const generateGoalRegions = (
     outRegions.push(outRegion)
   }
 
-  return tipRegions.concat(txtRegions).concat(outRegions)
+  return tipRegions.concat(inRegions).concat(outRegions)
 }
 
-export const getEdgeMiddlePosition = (points: Point[]): Point[] => {
-  const length = points.length
-  const result: Point[] = []
-
-  for (let i = 0; i < length; i++) {
-    const { x: xi, y: yi } = points[i]
-    const { x: xj, y: yj } = points[(i + 1) % length]
-    result.push({
-      x: xi + (xj - xi) / 2,
-      y: yi + (yj - yi) / 2,
-    })
-  }
-  return result
-}
-
+/**
+ * canvas context drawing region with given points
+ * @param ctx Canvas rendering context var
+ * @param points  positions of the polygon
+ * @param bgColor   background color for region
+ */
 export const drawRegion = (
   ctx: CanvasRenderingContext2D,
   points: Point[],
@@ -143,6 +165,15 @@ export const drawRegion = (
   ctx.closePath()
 }
 
+/**
+ * canvas context drawing text with given fontFamily, fontColor, position and rotation of the text
+ * @param ctx   canvas rendering context var
+ * @param text  text which would be drawn
+ * @param fontColor  text font color
+ * @param font  text font family(font-size, font-weight, font-family)
+ * @param angle   rotate angle of the text
+ * @param position  center position of the txt
+ */
 export const drawText = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -172,6 +203,13 @@ export const drawText = (
   ctx.closePath()
 }
 
+/**
+ * canvas drawing target circle
+ * @param ctx   canvas rendering context var
+ * @param point   center position of the target
+ * @param radius  radius of the target
+ * @param isMoving  picking up status of the target
+ */
 export const drawTarget = (
   ctx: CanvasRenderingContext2D,
   point: Point,
@@ -194,6 +232,12 @@ export const drawTarget = (
   ctx.closePath()
 }
 
+/**
+ * percent number formatter
+ * @param amount 0 ~ 1 number
+ * @param digits number of decimals
+ * @returns
+ */
 export const percentageFormatter = (
   amount: number,
   digits: number = 0

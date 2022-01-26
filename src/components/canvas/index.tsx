@@ -7,7 +7,6 @@ import {
   drawTarget,
   drawText,
   generateGoalRegions,
-  getEdgeMiddlePosition,
   isInsideCircle,
   isInsidePolygon,
   percentageFormatter,
@@ -24,50 +23,75 @@ const Canvas: React.FC<Props> = ({
   radius = 220,
   vertexRadius = 50,
   targetRadius = 5,
+  debug = false,
 }): JSX.Element => {
   const width: number =
-    Math.sqrt(Math.pow(radius, 2) - Math.pow(radius / 2, 2)) * 2
-  const height: number = radius * 1.5
+    Math.sqrt(Math.pow(radius, 2) - Math.pow(radius / 2, 2)) * 2 //  width of the canvas
+  const height: number = radius * 1.5 //  height of the canvas
 
-  let moving: boolean = false
+  let moving: boolean = false //  target isMoving status
   let center: Point = {
+    //  center position of the target
     x: width / 2 + vertexRadius,
     y: radius + vertexRadius,
   }
-  let targetPoint: Point = center
+  let targetPoint: Point = center //  targetPoint's position
 
-  const triRegion: Point[] = buildTriangle(radius, center)
-  const targetRegion: Point[] = buildTriangle(radius - targetRadius * 2, center)
-  const outerTri: Point[] = buildTriangle(radius + vertexRadius * 2, center)
-  const txtPositions: Point[] = getEdgeMiddlePosition(
-    buildTriangle(radius - vertexRadius, center)
+  const orgTriRegion: Point[] = buildTriangle(radius, center) //  origin triangle region
+  const outerTriRegion: Point[] = buildTriangle(
+    //  outer triangle region
+    radius + vertexRadius * 2,
+    center
   )
-  const arrowPositions: Point[] = getEdgeMiddlePosition(
-    buildTriangle(radius + vertexRadius + 10, center)
+  const txtPositions: Point[] = buildTriangle(
+    //  sustainability, economics, reliability text positions
+    radius / 2 - 25,
+    center,
+    Math.PI / 6
   )
-  const ratePositions: Point[] = getEdgeMiddlePosition(
-    buildTriangle(radius + vertexRadius + 100, center)
+  const arrowPositions: Point[] = buildTriangle(
+    //  direction arrow image center positions
+    radius / 2 + 25,
+    center,
+    Math.PI / 6
   )
-  const goalRegions: Point[][] = generateGoalRegions(center, radius)
+  const ratePositions: Point[] = buildTriangle(
+    //  rates center positions
+    radius / 2 + 75,
+    center,
+    Math.PI / 6
+  )
+  const goalRegions: Point[][] = generateGoalRegions(center, radius) //  9 regions
 
-  const { targetRates, updateTargetRates } = useTargetRates()
+  const { targetRates, updateTargetRates } = useTargetRates() //  curernt rates
 
+  /**
+   * detect given point restrict
+   * @param point
+   * @returns
+   */
   const isRestricted = (point: Point): boolean => {
-    const isInsideVertex = targetRegion.some((vertex: Point) =>
+    // checking target is inside the triangle's vertexes regions
+    const isInsideVertex = orgTriRegion.some((vertex: Point) =>
       isInsideCircle(point, vertex, vertexRadius)
     )
     if (isInsideVertex) {
       return true
     }
 
-    const isInsideTri = isInsidePolygon(point, outerTri)
+    // checking target is inside the outer triangle region
+    const isInsideTri = isInsidePolygon(point, outerTriRegion)
     if (!isInsideTri) {
       return true
     }
     return false
   }
 
-  const detectGoal = (point: Point): void => {
+  /**
+   * detect current target in goal regions and update rates
+   * @param point
+   */
+  const detectPtInGoalRegion = (point: Point): void => {
     let regionId = 0 //  center of tri
     let newRates = Object.values(targetRates)
 
@@ -118,51 +142,115 @@ const Canvas: React.FC<Props> = ({
     updateTargetRates(newRates[0], newRates[1], newRates[2])
   }
 
-  const DrawCanvas = (isMoving: boolean): void => {
-    if (canvasDOM && canvasDOM.getContext) {
-      const ctx: CanvasRenderingContext2D = canvasDOM.getContext(
-        "2d"
-      ) as CanvasRenderingContext2D
-
-      ctx.clearRect(0, 0, canvasDOM.width, canvasDOM.height)
-
-      drawRegion(ctx, triRegion, "#9fc3f5")
-
-      // goalRegions.forEach((region: Point[]) => {
-      //   drawRegion(
-      //     ctx,
-      //     region,
-      //     `rgb(${(Math.random() * 1000) % 255}, ${
-      //       (Math.random() * 1000) % 255
-      //     }, ${(Math.random() * 1000) % 255})`
-      //   )
-      // })
-
-      drawText(
-        ctx,
-        "ENERGY\nTRILEMMA",
-        "#005eca",
-        "bold 30px sans-serif",
-        0,
-        center
-      )
-      ;["ECONOMICS", "RELIABILITY", "SUSTAINABILITY"].forEach(
-        (txt: string, index: number) => {
-          drawText(
-            ctx,
-            txt,
-            "#00469b",
-            "bold 20px sans-serif",
-            60 - 60 * index,
-            txtPositions[index]
-          )
-        }
-      )
-
-      drawTarget(ctx, targetPoint, targetRadius, isMoving)
+  /**
+   * canvas mouse event handling method
+   * @returns
+   */
+  const EventListeners = (): void => {
+    if (!canvasDOM) {
+      return
     }
+
+    canvasDOM.addEventListener("mousedown", function (e) {
+      const mouse = {
+        x: e.clientX,
+        y: e.clientY,
+      }
+      if (isInsideCircle(mouse, targetPoint, targetRadius)) {
+        moving = true
+      }
+    })
+
+    canvasDOM.addEventListener("mouseup", function (e) {
+      moving = false
+      DrawCanvas(moving)
+    })
+
+    canvasDOM.addEventListener("mousemove", function (e) {
+      if (!moving) {
+        return
+      }
+
+      const mouse: Point = {
+        x: e.clientX,
+        y: e.clientY,
+      }
+
+      if (!isRestricted(targetPoint)) {
+        DrawCanvas(moving)
+        detectPtInGoalRegion(targetPoint)
+      }
+      if (!isRestricted(mouse)) {
+        targetPoint = mouse
+      }
+    })
   }
 
+  /**
+   * main drawing method(draw triangle region, texts and target circle)
+   * @param isMoving target is moving?
+   * @returns
+   */
+  const DrawCanvas = (isMoving: boolean): void => {
+    if (!canvasDOM || !canvasDOM.getContext) {
+      return
+    }
+
+    const ctx: CanvasRenderingContext2D = canvasDOM.getContext(
+      "2d"
+    ) as CanvasRenderingContext2D
+
+    ctx.clearRect(0, 0, canvasDOM.width, canvasDOM.height)
+
+    // draw triangle
+    drawRegion(ctx, orgTriRegion, "#9fc3f5")
+
+    // if debugging mode, draw goal regions
+    if (debug) {
+      goalRegions.forEach((region: Point[]) => {
+        drawRegion(
+          ctx,
+          region,
+          `rgb(${(Math.random() * 1000) % 255}, ${
+            (Math.random() * 1000) % 255
+          }, ${(Math.random() * 1000) % 255})`
+        )
+      })
+    }
+
+    // draw center text Energy Trilemma
+    drawText(
+      ctx,
+      "ENERGY\nTRILEMMA",
+      "#005eca",
+      "bold 30px sans-serif",
+      0,
+      center
+    )
+    ;["ECONOMICS", "RELIABILITY", "SUSTAINABILITY"].forEach(
+      (txt: string, index: number) => {
+        drawText(
+          ctx,
+          txt,
+          "#00469b",
+          "bold 20px sans-serif",
+          60 - 60 * index,
+          txtPositions[index]
+        )
+      }
+    )
+
+    // draw target
+    drawTarget(ctx, targetPoint, targetRadius, isMoving)
+  }
+
+  /**
+   * render triangle vertex range
+   * @param point triangle vertext position
+   * @param radius  vertext radius
+   * @param index
+   * @returns
+   */
   const renderVertex = (
     point: Point,
     radius: number,
@@ -182,7 +270,13 @@ const Canvas: React.FC<Props> = ({
     </div>
   )
 
-  const renderArrow = (edge: Point, index: number): JSX.Element => (
+  /**
+   * render arrows
+   * @param point
+   * @param index
+   * @returns
+   */
+  const renderArrow = (point: Point, index: number): JSX.Element => (
     <img
       key={index}
       className="arrow"
@@ -190,13 +284,19 @@ const Canvas: React.FC<Props> = ({
       alt="some"
       style={{
         width: radius,
-        left: edge.x,
-        top: edge.y,
+        left: point.x,
+        top: point.y,
         transform: `translate(-50%, -50%) rotate(${60 + index * 120}deg)`,
       }}
     />
   )
 
+  /**
+   * render rates(economics, reliability, sustainability)
+   * @param point
+   * @param index
+   * @returns
+   */
   const renderRate = (point: Point, index: number): JSX.Element => (
     <div
       key={index}
@@ -212,65 +312,15 @@ const Canvas: React.FC<Props> = ({
     </div>
   )
 
-  const EventListeners = (): void => {
-    if (!canvasDOM) {
-      return
-    }
-
-    canvasDOM.addEventListener("mousedown", function (e) {
-      const mouseX = e.clientX - 1,
-        mouseY = e.clientY - 1,
-        distance = Math.sqrt(
-          Math.pow(mouseX - targetPoint.x, 2) +
-            Math.pow(mouseY - targetPoint.y, 2)
-        )
-
-      if (distance <= targetRadius) {
-        moving = true
-      }
-    })
-
-    canvasDOM.addEventListener("mouseup", function (e) {
-      moving = false
-      DrawCanvas(moving)
-    })
-
-    canvasDOM.addEventListener("mousemove", function (e) {
-      if (moving) {
-        if (!isRestricted(targetPoint)) {
-          DrawCanvas(moving)
-        }
-        if (
-          !isRestricted({
-            x: e.clientX,
-            y: e.clientY,
-          })
-        ) {
-          targetPoint = {
-            x: e.clientX - 1,
-            y: e.clientY - 1,
-          }
-        }
-
-        detectGoal(targetPoint)
-      }
-    })
-  }
-
   useEffect(() => {
-    const timer = setInterval(() => {
-      const dom: HTMLCanvasElement | null = document.getElementById(
-        "myCanvas"
-      ) as HTMLCanvasElement | null
-      if (dom) {
-        canvasDOM = dom
-        clearInterval(timer)
-
-        DrawCanvas(moving)
-        EventListeners()
-      }
-    }, 100)
-
+    const dom: HTMLCanvasElement | null = document.getElementById(
+      "myCanvas"
+    ) as HTMLCanvasElement | null
+    if (dom) {
+      canvasDOM = dom
+      DrawCanvas(moving)
+      EventListeners()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -283,7 +333,7 @@ const Canvas: React.FC<Props> = ({
       >
         Your browser does not support the HTML5 canvas tag.
       </canvas>
-      {triRegion.map((vertex: Point, index: number) => {
+      {orgTriRegion.map((vertex: Point, index: number) => {
         return renderVertex(vertex, vertexRadius, index + 1)
       })}
       {arrowPositions.map((edge: Point, index: number) => {
